@@ -4,8 +4,7 @@ Welcome to the **backend** of Soni Blissful Events — the powerhouse behind a m
 
 This server handles all the core logic that makes the platform work:
 - 🔐 Auth & Role Verification  
-- 🏸 Court & Booking Management  
-- 💳 Payments via Stripe (with coupons)  
+- 🏸 Events Booking Management  
 - 📢 Announcements, Branches, and Profile APIs
 
 While the server focuses on secure data and API handling, all user interactions and UI are managed from the client side.
@@ -13,8 +12,8 @@ While the server focuses on secure data and API handling, all user interactions 
 ---
 
 👉 To explore the full system with UI, visit the client:  
-🔗 **Client Repository:** [Elite-Arena-client-side](https://github.com/touhidtamim/elite-arena-client-side)  
-🌐 **Live View:** [Elite-Arena Live View](https://test-elite-arena.netlify.app)
+🔗 **Client Repository:**   
+🌐 **Live View:** 
 
 ---
 
