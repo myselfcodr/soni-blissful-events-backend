@@ -7,8 +7,6 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5000;
-// Stripe initialization removed
-// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
@@ -34,9 +32,11 @@ async function run() {
     const bookingsCollection = db.collection("bookings");
     const couponsCollection = db.collection("coupons");
     const announcementsCollection = db.collection("announcements");
-    const paymentsCollection = client.db("eliteArena").collection("payments");
+    const paymentsCollection = db.collection("payments");
+    const bannersCollection = db.collection("banners"); // ✅ New collection
+    const showcasesCollection = db.collection("showcases"); // ✅ New collection
 
-    //  Save or update user
+    // ==================== USER ROUTES ====================
     app.put("/users", async (req, res) => {
       const user = req.body;
       const email = user?.email;
@@ -87,7 +87,6 @@ async function run() {
       }
     });
 
-    // Get all users with optional search & role filter
     app.get("/users", async (req, res) => {
       try {
         const { search, role } = req.query;
@@ -115,7 +114,6 @@ async function run() {
       }
     });
 
-    // Get all members
     app.get("/members", async (req, res) => {
       try {
         const members = await usersCollection
@@ -129,7 +127,6 @@ async function run() {
       }
     });
 
-    // Get admin overview
     app.get("/admin/overview", async (req, res) => {
       const totalUsers = await usersCollection.countDocuments();
       const totalBookings = await bookingsCollection.countDocuments();
@@ -138,7 +135,6 @@ async function run() {
       res.send({ totalUsers, totalBookings, totalMembers });
     });
 
-    // get user role by email
     app.get("/users/role/:email", async (req, res) => {
       const email = req.params.email;
 
@@ -156,7 +152,6 @@ async function run() {
       }
     });
 
-    // Downgrade member
     app.patch("/members/downgrade/:id", async (req, res) => {
       const userId = req.params.id;
 
@@ -179,7 +174,6 @@ async function run() {
       }
     });
 
-    // get user by email
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email };
@@ -190,7 +184,6 @@ async function run() {
       res.send(user);
     });
 
-    // update profile data
     app.patch("/users/:email", async (req, res) => {
       const email = req.params.email;
       const { name, image } = req.body;
@@ -205,7 +198,7 @@ async function run() {
       res.send(result);
     });
 
-    // Create court
+    // ==================== COURTS ROUTES ====================
     app.post("/courts", async (req, res) => {
       try {
         const court = req.body;
@@ -216,7 +209,6 @@ async function run() {
       }
     });
 
-    // Get courts
     app.get("/courts", async (req, res) => {
       try {
         const courts = await courtsCollection.find().toArray();
@@ -226,7 +218,6 @@ async function run() {
       }
     });
 
-    // Update court
     app.patch("/courts/:id", async (req, res) => {
       const courtId = req.params.id;
       const updateData = req.body;
@@ -247,7 +238,6 @@ async function run() {
       }
     });
 
-    // Delete court
     app.delete("/courts/:id", async (req, res) => {
       const courtId = req.params.id;
 
@@ -264,11 +254,11 @@ async function run() {
       }
     });
 
-    // Create booking
+    // ==================== BOOKINGS ROUTES ====================
     app.post("/bookings", async (req, res) => {
       try {
         const booking = req.body;
-        booking.status = "pending"; // enforce status
+        booking.status = "pending";
         booking.createdAt = new Date();
 
         const result = await bookingsCollection.insertOne(booking);
@@ -278,7 +268,6 @@ async function run() {
       }
     });
 
-    // Get all bookings
     app.get("/bookings", async (req, res) => {
       try {
         const bookings = await bookingsCollection.find().toArray();
@@ -288,7 +277,6 @@ async function run() {
       }
     });
 
-    // Get all pending bookings
     app.get("/bookings/pending", async (req, res) => {
       try {
         const pendingBookings = await bookingsCollection.find({ status: "pending" }).toArray();
@@ -298,7 +286,6 @@ async function run() {
       }
     });
 
-    // Get pending bookings for specific user
     app.get("/bookings/pending/:userId", async (req, res) => {
       try {
         const userId = req.params.userId;
@@ -309,7 +296,6 @@ async function run() {
       }
     });
 
-    // Update booking status with validation and "paid" support
     app.patch("/bookings/:id", async (req, res) => {
       const bookingId = req.params.id;
       const { status } = req.body;
@@ -358,7 +344,6 @@ async function run() {
       }
     });
 
-    // Get approved bookings by email
     app.get("/bookings/approved/:email", async (req, res) => {
       const userEmail = req.params.email;
 
@@ -376,7 +361,6 @@ async function run() {
       }
     });
 
-    // Get booking by ID
     app.get("/bookings/:id", async (req, res) => {
       const bookingId = req.params.id;
 
@@ -393,7 +377,6 @@ async function run() {
       }
     });
 
-    // Delete booking (reject)
     app.delete("/bookings/:id", async (req, res) => {
       const bookingId = req.params.id;
 
@@ -410,7 +393,7 @@ async function run() {
       }
     });
 
-    // Coupons CRUD (create, validate, get, update, delete)
+    // ==================== COUPONS ROUTES ====================
     app.post("/coupons", async (req, res) => {
       try {
         const { title, description, coupon, discountAmount } = req.body;
@@ -509,7 +492,7 @@ async function run() {
       }
     });
 
-    // Announcements CRUD
+    // ==================== ANNOUNCEMENTS ROUTES ====================
     app.get("/announcements", async (req, res) => {
       try {
         const announcements = await announcementsCollection.find().sort({ _id: -1 }).toArray();
@@ -589,6 +572,127 @@ async function run() {
         res.status(200).json({ message: "Announcement deleted" });
       } catch (error) {
         res.status(500).json({ error: "Failed to delete announcement" });
+      }
+    });
+
+    // ==================== BANNERS ROUTES (NEW) ====================
+    // Get all banner slides (sorted by order)
+    app.get("/banners", async (req, res) => {
+      try {
+        const banners = await bannersCollection.find().sort({ order: 1 }).toArray();
+        res.status(200).json(banners);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to fetch banners" });
+      }
+    });
+
+    // Create banner slide
+    app.post("/banners", async (req, res) => {
+      try {
+        const banner = req.body;
+        banner.createdAt = new Date();
+        const result = await bannersCollection.insertOne(banner);
+        res.status(201).json(result);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to create banner", details: error.message });
+      }
+    });
+
+    // Update banner slide
+    app.patch("/banners/:id", async (req, res) => {
+      const bannerId = req.params.id;
+      const updateData = req.body;
+
+      try {
+        const result = await bannersCollection.updateOne(
+          { _id: new ObjectId(bannerId) },
+          { $set: updateData }
+        );
+
+        if (result.matchedCount === 0) {
+          return res.status(404).json({ error: "Banner not found" });
+        }
+
+        res.status(200).json({ message: "Banner updated successfully", result });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to update banner", details: error.message });
+      }
+    });
+
+    // Delete banner slide
+    app.delete("/banners/:id", async (req, res) => {
+      const bannerId = req.params.id;
+
+      try {
+        const result = await bannersCollection.deleteOne({ _id: new ObjectId(bannerId) });
+
+        if (result.deletedCount === 0) {
+          return res.status(404).json({ error: "Banner not found" });
+        }
+
+        res.status(200).json({ message: "Banner deleted successfully" });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to delete banner", details: error.message });
+      }
+    });
+
+    // ==================== SHOWCASES ROUTES (NEW) ====================
+    // Get all showcases
+    app.get("/showcases", async (req, res) => {
+      try {
+        const showcases = await showcasesCollection.find().toArray();
+        res.status(200).json(showcases);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to fetch showcases" });
+      }
+    });
+
+    // Create showcase
+    app.post("/showcases", async (req, res) => {
+      try {
+        const showcase = req.body;
+        const result = await showcasesCollection.insertOne(showcase);
+        res.status(201).json(result);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to create showcase", details: error.message });
+      }
+    });
+
+    // Update showcase
+    app.patch("/showcases/:id", async (req, res) => {
+      const showcaseId = req.params.id;
+      const updateData = req.body;
+
+      try {
+        const result = await showcasesCollection.updateOne(
+          { _id: new ObjectId(showcaseId) },
+          { $set: updateData }
+        );
+
+        if (result.matchedCount === 0) {
+          return res.status(404).json({ error: "Showcase not found" });
+        }
+
+        res.status(200).json({ message: "Showcase updated successfully", result });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to update showcase", details: error.message });
+      }
+    });
+
+    // Delete showcase
+    app.delete("/showcases/:id", async (req, res) => {
+      const showcaseId = req.params.id;
+
+      try {
+        const result = await showcasesCollection.deleteOne({ _id: new ObjectId(showcaseId) });
+
+        if (result.deletedCount === 0) {
+          return res.status(404).json({ error: "Showcase not found" });
+        }
+
+        res.status(200).json({ message: "Showcase deleted successfully" });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to delete showcase", details: error.message });
       }
     });
 
